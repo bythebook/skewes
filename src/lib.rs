@@ -51,7 +51,7 @@ impl BigUint {
     }
 
     pub fn add(&self, other: &Self) -> Self {
-        let mut result = slice::add(&self.digits, &other.digits);
+        let result = slice::add(&self.digits, &other.digits);
         Self::from(result)
     }
 
@@ -61,7 +61,7 @@ impl BigUint {
         Self::from(result)
     }
 
-    pub fn minus(&self, other: &Self) -> Option<Self> {
+    pub fn sub(&self, other: &Self) -> Option<Self> {
         match slice::sub(&self.digits, &other.digits) {
             Some(result) => {
                 let mut ret = Self::from(result);
@@ -72,8 +72,9 @@ impl BigUint {
         }
     }
 
-    pub fn div(&self, _other: &Self) -> (Self, Self) {
-        (Self::zero(), Self::zero())
+    pub fn div(&self, other: &Self) -> (Self, Self) {
+        let (d, r) = slice::div(&self.digits, &other.digits);
+        (Self::from(d), Self::from(r))
     }
 
     // TODO: This increments a number in-place. Implement in-place addition for +=
@@ -92,22 +93,7 @@ impl BigUint {
         }
     }
 
-    // Idea: have this operate on slices of u64 instead, then can reuse data when performing long division
-    pub fn short_div(&self, other: &Self) -> (u64, Self) {
-        let mut d = 0;
-        let mut candidate = other.clone();
-        loop {
-            match self.minus(&candidate) {
-                None => break,
-                Some(_) => {
-                    candidate = candidate.add(other); //TODO: in-place addition
-                    d += 1;
-                },
-            }
-        }
-        // TODO: This smells bad
-        (d, self.minus(&candidate.minus(&other).unwrap()).unwrap()) // Guaranteed to be safe TODO: add unchecked minus
-    }
+
 
     fn normalize(&mut self) -> () {
         // There might be a better way to do this. Using iterators, can't delete from vector while iterating.
@@ -208,7 +194,7 @@ mod tests {
     fn test_sub_more_digits() {
         let a = BigUint::from(vec!(1, 2));
         let b = BigUint::from(vec!(8, 1, 3));
-        assert_eq!(a.minus(&b), None);
+        assert_eq!(a.sub(&b), None);
     }
 
     #[test]
@@ -216,14 +202,14 @@ mod tests {
         let a = BigUint::from(vec!(1, 2, 3));
         let b = BigUint::from(vec!(NINE, 1));
         let c = BigUint::from(vec!(2, 0, 3));
-        assert_eq!(a.minus(&b), Some(c));
+        assert_eq!(a.sub(&b), Some(c));
     }
 
     #[test]
     fn test_sub_bigger_number() {
         let a = BigUint::from(vec!(1, 2));
         let b = BigUint::from(vec!(3, 2));
-        assert_eq!(a.minus(&b), None);
+        assert_eq!(a.sub(&b), None);
     }
 
     #[test]
@@ -231,17 +217,7 @@ mod tests {
         let a = BigUint::from(vec!(3, 2));
         let b = BigUint::from(vec!(1, 2));
         let c = BigUint::from(vec!(2));
-        assert_eq!(a.minus(&b), Some(c));
-    }
-
-    #[test]
-    fn test_short_div() {
-        let a = BigUint::from(234);
-        let b = BigUint::from(123);
-        let c = BigUint::from(14);
-        assert_eq!(a.short_div(&b), (1, BigUint::from(111)));
-        assert_eq!(c.short_div(&b), (0, c.clone()));
-        assert_eq!(a.short_div(&c), (16, BigUint::from(10)));
+        assert_eq!(a.sub(&b), Some(c));
     }
 
 }

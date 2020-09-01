@@ -110,11 +110,68 @@ pub fn sub(first: &[u64], second: &[u64]) -> Option<Vec<u64>> {
     Some(result)
 }
 
+pub fn div(p: &[u64], q: &[u64]) -> (Vec<u64>, Vec<u64>) {
+    let mut result: Vec<u64> = Vec::new();
+    let mut remainder: Vec<u64>;
+    // [1, 2] / [7]
+    // p_digits = 2
+    // q_digits = 1
+    // num_digits = 1
+    // numerator = [1, 2]@[1..2] = [2]
+    // short_div => (0, [2])
+    // b = [2]
+    // result = [0]
+    // carry = [p[0]] = [1]
+    // carry = [1].extend([2]) = [1, 2]
+    // numerator = [1,2]
+    // short_div => 
+    let p_digits = p.len();
+    let q_digits = q.len();
+    let mut carry: Vec<u64>;
+    let mut num_digits = q_digits;
+    let mut numerator = &p[p_digits-num_digits..p_digits].to_vec();
+    loop {
+        // Divide
+        let (a, b) = short_div(&numerator, q);
+        
+        // Update state
+        result.push(a); // Can result in leading zeroes
+        remainder = b.clone();
+        num_digits += 1;
+        if num_digits > p_digits {
+            break;
+        }
+        carry = vec!(p[p_digits-num_digits]);
+        carry.extend(b);
+        numerator = &carry;
+    }
+
+    (result, remainder)
+}
+
+// Idea: have this operate on slices of u64 instead, then can reuse data when performing long divisio
+fn short_div(p: &[u64], q: &[u64]) -> (u64, Vec<u64>) {
+    let mut d = 0;
+    let mut candidate = q.clone().to_vec();
+    loop {
+        match sub(p, &candidate) {
+            None => break,
+            Some(_) => {
+                candidate = add(&candidate, q); //TODO: in-place addition
+                d += 1;
+            },
+        }
+    }
+    let rem = sub(p, &sub(&candidate, q).unwrap()).unwrap();
+    (d, rem) // Guaranteed to be safe TODO: add unchecked minus
+}
+
+
 pub fn cmp(first: &[u64], second: &[u64]) -> Ordering {
-    if first.len() > second.len() {
+    if digit_length(first) > digit_length(second) {
         return Ordering::Greater
     }
-    else if first.len() < second.len() {
+    else if digit_length(first) < digit_length(second) {
         return Ordering::Less
     }
     else {
@@ -129,6 +186,15 @@ pub fn cmp(first: &[u64], second: &[u64]) -> Ordering {
         }
         Ordering::Equal
     }
+}
+
+pub fn digit_length(digits: &[u64]) -> usize {
+    let mut l = digits.len();
+    for digit in digits.iter().rev() {
+        if *digit == 0 { l -= 1; }
+        else { break; }
+    }
+    l
 }
 
 
@@ -276,6 +342,51 @@ mod tests {
 
         let (result, carry) = sub_with_carry(NINE, EIGHT, true);
         assert_eq!((result, carry), (0, false));
+    }
+
+    fn test_divide_two_numbers() {
+        let a = vec!(1, 2);
+        let b = vec!(7);
+        let c = vec!(3);
+        assert_eq!(div(&a, &b), (c, vec!(0)));
+    }
+
+    #[test]
+    fn test_single_mul_temp() {
+        const SEVEN: u64 = u64::MAX - 2;
+        let a = SEVEN;
+        let b = [3];
+        assert_eq!(mul_by_single_digit(&b, a, 0), [u64::MAX-8, 2]);
+    }
+
+    #[test]
+    fn test_mul_temp() {
+        const SEVEN: u64 = u64::MAX - 2;
+        let a = [SEVEN];
+        let b = [3];
+        assert_eq!(mul(&a, &b), [u64::MAX - 8, 2]);
+    }
+
+    #[test]
+    fn test_short_div_multiple_digits() {
+        const SEVEN: u64 = u64::MAX - 2;
+        let a = [u64::MAX - 8, 2];
+        let b = [SEVEN];
+        assert_eq!(short_div(&a, &b), (3, vec!(0)));
+
+    }
+
+    // 3 * SEVEN = 3 * (BASE - 3) = 3 * BASE - 9 = 2 * BASE + (BASE - 9)
+
+
+    #[test]
+    fn test_short_div() {
+        let a = [234];
+        let b = [123];
+        let c = [14];
+        assert_eq!(short_div(&a, &b), (1, vec!(111)));
+        assert_eq!(short_div(&c, &b), (0, vec!(14)));
+        assert_eq!(short_div(&a, &c), (16, vec!(10)));
     }
 
 }
