@@ -1,6 +1,7 @@
 use std::convert::From;
-use std::convert::TryFrom;
 use std::cmp::{Ord, Ordering};
+
+mod slice;
 
 #[derive(Debug,PartialEq,Eq,Clone)]
 pub struct BigUint {
@@ -25,24 +26,7 @@ impl From<Vec<u64>> for BigUint {
 
 impl Ord for BigUint {
     fn cmp(&self, other: &Self) -> Ordering {
-        if self.digits.len() > other.digits.len() {
-            return Ordering::Greater
-        }
-        else if self.digits.len() < other.digits.len() {
-            return Ordering::Less
-        }
-        else {
-            let iter = self.digits.iter().zip(other.digits.iter());
-            for (digit, other_digit) in iter.rev() {
-                if *digit > *other_digit {
-                    return Ordering::Greater
-                }
-                else if *digit < *other_digit {
-                    return Ordering::Less
-                }
-            }
-            Ordering::Equal
-        }
+        slice::cmp(&self.digits, &other.digits)
     }
 }
 
@@ -53,11 +37,6 @@ impl PartialOrd for BigUint {
 }
 
 impl BigUint {
-    pub fn new() -> Self {
-        Self {
-            digits: vec!(0),
-        }
-    }
 
     pub fn zero() -> Self {
         Self {
@@ -71,113 +50,26 @@ impl BigUint {
         }
     }
 
-    pub fn plus(&self, other: &Self) -> Self {
-        let mut result = Vec::new();
-        let first: &Self;
-        let second: &Self;
-        
-        // Order numbers so that first is the one with the greater number of digits
-        if self.digits.len() < other.digits.len() {
-            first = other;
-            second = self;
-        }
-        else {
-            first = self;
-            second = other;
-        }
-        let mut firstiter = first.digits.iter();
-        let mut seconditer = second.digits.iter();
-        let mut carry = false;
+    pub fn add(&self, other: &Self) -> Self {
+        let mut result = slice::add(&self.digits, &other.digits);
+        Self::from(result)
+    }
 
-        // Add digits of the second number to the first
-        loop {
-            match seconditer.next() {
-                Some(seconddigit) => {
-                    let firstdigit = firstiter.next().unwrap();
-                    let (a, b) = add_with_carry(*firstdigit, *seconddigit, carry);
-                    carry = b;
-                    result.push(a);
-                }
-                None => break,
-            }
-        }
 
-        // Propagate any left over carries from the second number to the first
-        loop {
-            match firstiter.next() {
-                Some(firstdigit) => {
-                    let (a, b) = add_with_carry(*firstdigit, 0, carry);
-                    carry = b;
-                    match carry {
-                        true => result.push(a),
-                        false => {result.push(a); break;}
-                    }
-                },
-                None => {
-                    if carry {
-                        result.push(1);
-                    }
-                    return Self::from(result);
-                }
-            }
-        }
-
-        // Add remaining digits of the first number to the result
-        loop {
-            match firstiter.next() {
-                Some(firstdigit) => result.push(*firstdigit),
-                None => break,
-            }
-        }
-
-        // Add the final one if there are any remaining carries
-        if carry {
-            result.push(1);
-        }
-
+    pub fn mul(&self, other: &Self) -> Self {
+        let result = slice::mul(&self.digits, &other.digits);
         Self::from(result)
     }
 
     pub fn minus(&self, other: &Self) -> Option<Self> {
-        let mut carry: bool = false;
-        let mut result: Vec<u64> = Vec::new(); // TODO can size this
-        let mut other_iter = other.digits.iter();
-        if other > self {
-            return None
+        match slice::sub(&self.digits, &other.digits) {
+            Some(result) => {
+                let mut ret = Self::from(result);
+                ret.normalize();
+                Some(ret)
+            },
+            None => None
         }
-        else {
-            for digit in self.digits.iter() {
-                match other_iter.next() {
-                    Some(other_digit) => {
-                        let (a, b) = sub_with_carry(*digit, *other_digit, carry);
-                        carry = b;
-                        result.push(a);
-                    },
-                    None => {
-                        let (a, b) = sub_with_carry(*digit, 0, carry);
-                        carry = b;
-                        result.push(a);
-                    }
-                }
-            }
-            if carry {
-                return None // Can't happen, as we checked for one bigger than the other
-            }
-        }
-        let mut ret = Self::from(result);
-        ret.normalize();
-        Some(ret)
-    }
-
-    pub fn mul(&self, other: &Self) -> Self {
-        let mut accumulator = Self::new();
-        let mut significance = 0;
-        for digit in self.digits.iter() {
-            let result = other.mul_by_single_digit(*digit, significance);
-            accumulator = result.plus(&accumulator);
-            significance += 1;
-        }
-        accumulator
     }
 
     pub fn div(&self, _other: &Self) -> (Self, Self) {
@@ -208,36 +100,13 @@ impl BigUint {
             match self.minus(&candidate) {
                 None => break,
                 Some(_) => {
-                    candidate = candidate.plus(other); //TODO: in-place addition
+                    candidate = candidate.add(other); //TODO: in-place addition
                     d += 1;
                 },
             }
         }
         // TODO: This smells bad
         (d, self.minus(&candidate.minus(&other).unwrap()).unwrap()) // Guaranteed to be safe TODO: add unchecked minus
-    }
-
-    // Multiply a BigUint by a single u64 digit, allowing for significance number of zeroes at the start
-    // Used to build up longhand multiplication
-    fn mul_by_single_digit(&self, digit: u64, significance: u64) -> Self {
-        let mut result = Vec::new();
-        let mut msd: u64 = 0;
-        let mut lsd: u64;
-        for _ in 1..(significance+1) {
-            result.push(0);
-        }
-
-        for other_digit in self.digits.iter() {
-            let (a, b) = mul_with_carry(*other_digit, digit);
-            lsd = a; 
-            let (current_digit, carry) = lsd.overflowing_add(msd);
-            result.push(current_digit);
-            msd = b + (carry as u64);
-        }
-        if msd > 0 {
-            result.push(msd);
-        }
-        BigUint::from(result)
     }
 
     fn normalize(&mut self) -> () {
@@ -256,36 +125,6 @@ impl BigUint {
     }
 }
 
-fn add_with_carry(digita: u64, digitb: u64, prev_carry: bool) -> (u64, bool) {
-    let (resultdigit, new_carry) = digita.overflowing_add(digitb);
-    let carrydigit = prev_carry as u64;
-    match new_carry {
-        true => (resultdigit + carrydigit, true),
-        false => resultdigit.overflowing_add(carrydigit),
-    }
-}
-
-fn sub_with_carry(digita: u64, digitb: u64, prev_carry: bool) -> (u64, bool) {
-    let (resultdigit, new_carry) = digita.overflowing_sub(digitb);
-    match prev_carry {
-        true => {
-            // If the previous carry causes overflow, the result of the place digits was 0, so carry should be true
-            // If the previous carry doesn't, we use the overflow result previously arrived at
-            match resultdigit.overflowing_sub(1) {
-                (res, true) => (res, true),
-                (res, false) => (res, new_carry),
-            }
-        },
-        false => (resultdigit, new_carry)
-    }
-}
-
-fn mul_with_carry(digita: u64, digitb: u64) -> (u64, u64) {
-    let result = (digita as u128) * (digitb as u128);
-    (u64::try_from(result & (u64::MAX as u128)).unwrap(),
-     u64::try_from(result >> 64).unwrap())
-}
-
 #[cfg(test)]
 mod tests {
     use crate::*;
@@ -296,43 +135,15 @@ mod tests {
 
     macro_rules! assert_plus_identity {
         ($a:expr, $b:expr => $c:expr) => (
-            assert_eq!($a.plus(&$b), $c);
-            assert_eq!($b.plus(&$a), $c);
+            assert_eq!($a.add(&$b), $c);
+            assert_eq!($b.add(&$a), $c);
         );
-    }
-
-    #[test]
-    fn add_with_carry_one_plus_nine_wo_carry() {
-        let (result, carry) = add_with_carry(NINE, ONE, false);
-        assert_eq!(result, 0);
-        assert_eq!(carry, true);
-    }
-
-    #[test]
-    fn add_with_carry_one_plus_nine_w_carry() {
-        let (result, carry) = add_with_carry(NINE, ONE, true);
-        assert_eq!(result, 1);
-        assert_eq!(carry, true);
-    }
-
-    #[test]
-    fn add_with_carry_one_plus_eight_wo_carry() {
-        let (result, carry) = add_with_carry(EIGHT, ONE, false);
-        assert_eq!(result, NINE);
-        assert_eq!(carry, false);
-    }
-
-    #[test]
-    fn add_with_carry_one_plus_eight_w_carry() {
-        let (result, carry) = add_with_carry(EIGHT, ONE, true);
-        assert_eq!(result, 0);
-        assert_eq!(carry, true);
     }
 
     #[test]
     fn can_create_from_u64() {
         let a = BigUint::from(42);
-        let mut b = BigUint::new();
+        let mut b = BigUint::zero();
         b.digits[0] = 42;
         assert_eq!(a, b);
     }
@@ -386,60 +197,11 @@ mod tests {
     }
 
     #[test]
-    fn test_multiply_with_carry() {
-        let a = NINE;
-        let b = NINE;
-        let c = (1, EIGHT);
-        assert_eq!(mul_with_carry(a, b), c);
-    }
-
-
-    #[test]
-    fn test_single_digit_multiply() {
-        let a = BigUint::from(NINE);
-        let b = NINE;
-        let c = BigUint::from(vec!(1, EIGHT));
-        assert_eq!(a.mul_by_single_digit(b, 0), c);
-    }
-
-    #[test]
-    fn test_single_digit_multiply_with_significance() {
-        let a = BigUint::from(NINE);
-        let b = NINE;
-        let c = BigUint::from(vec!(0, 0, 1, EIGHT));
-        assert_eq!(a.mul_by_single_digit(b, 2), c);
-    }
-
-    #[test]
     fn test_two_digit_by_two_digit_multiply() {
         let a = BigUint::from(vec!(NINE, ONE));
         let b = BigUint::from(vec!(2, 1));
         let c = BigUint::from(vec!(EIGHT, 2, 2));
         assert_eq!(a.mul(&b), c);
-    }
-
-    #[test]
-    fn test_sub_two_digits_wo_carry() {
-        let (result, carry) = sub_with_carry(1, NINE, false);
-        assert_eq!((result, carry), (2, true));
-
-        let (result, carry) = sub_with_carry(NINE, 1, false);
-        assert_eq!((result, carry), (EIGHT, false));
-
-        let (result, carry) = sub_with_carry(NINE, EIGHT, false);
-        assert_eq!((result, carry), (1, false));
-    }
-
-    #[test]
-    fn test_sub_two_digits_w_carry() {
-        let (result, carry) = sub_with_carry(1, NINE, true);
-        assert_eq!((result, carry), (1, true));
-
-        let (result, carry) = sub_with_carry(NINE, 1, true);
-        assert_eq!((result, carry), (u64::MAX - 2, false));
-
-        let (result, carry) = sub_with_carry(NINE, EIGHT, true);
-        assert_eq!((result, carry), (0, false));
     }
 
     #[test]
@@ -479,7 +241,7 @@ mod tests {
         let c = BigUint::from(14);
         assert_eq!(a.short_div(&b), (1, BigUint::from(111)));
         assert_eq!(c.short_div(&b), (0, c.clone()));
-        assert_eq!(a.short_div(&c), (0, BigUint::from(10)));
+        assert_eq!(a.short_div(&c), (16, BigUint::from(10)));
     }
 
 }
