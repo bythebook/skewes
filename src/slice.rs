@@ -107,6 +107,7 @@ pub fn sub(first: &[u64], second: &[u64]) -> Option<Vec<u64>> {
             return None // Can't happen, as we checked for one bigger than the other
         }
     }
+    normalize(&mut result);
     Some(result)
 }
 
@@ -146,14 +147,17 @@ pub fn div(p: &[u64], q: &[u64]) -> (Vec<u64>, Vec<u64>) {
         numerator = &carry;
     }
 
-    (result, remainder)
+    let ret: Vec<u64> = result.into_iter().rev().collect();
+    (ret, remainder)
 }
 
-// Idea: have this operate on slices of u64 instead, then can reuse data when performing long divisio
-fn short_div(p: &[u64], q: &[u64]) -> (u64, Vec<u64>) {
+// Idea: have this operate on slices of u64 instead, then can reuse data when performing long division
+pub fn short_div(p: &[u64], q: &[u64]) -> (u64, Vec<u64>) {
+    // vec!(20, 3) / vec!(7)
     let mut d = 0;
     let mut candidate = q.clone().to_vec();
     loop {
+        println!("Trying: {:?}, Divisor: {}", candidate, d);
         match sub(p, &candidate) {
             None => break,
             Some(_) => {
@@ -165,6 +169,9 @@ fn short_div(p: &[u64], q: &[u64]) -> (u64, Vec<u64>) {
     let rem = sub(p, &sub(&candidate, q).unwrap()).unwrap();
     (d, rem) // Guaranteed to be safe TODO: add unchecked minus
 }
+
+// Normalize
+
 
 
 pub fn cmp(first: &[u64], second: &[u64]) -> Ordering {
@@ -195,6 +202,21 @@ pub fn digit_length(digits: &[u64]) -> usize {
         else { break; }
     }
     l
+}
+
+fn normalize(digits: &mut Vec<u64>) -> () {
+    // There might be a better way to do this. Using iterators, can't delete from vector while iterating.
+    // See contain-rs's 'Cursor' trait for a possible alternative to iterators
+    let mut last_index = 1; // Set last_index to 1 so that if a different answer isn't found, we keep least significant zero
+    for (index, digit) in digits.iter().rev().enumerate() {
+        if *digit > 0 { 
+            last_index = digits.len() - index; // Remember that this is a reverse iterator
+            break;
+        }
+    }
+    for _ in last_index..digits.len() {
+        digits.pop();
+    }
 }
 
 
@@ -344,11 +366,22 @@ mod tests {
         assert_eq!((result, carry), (0, false));
     }
 
+    #[test]
     fn test_divide_two_numbers() {
-        let a = vec!(1, 2);
+        let a = vec!(1, 7);
         let b = vec!(7);
-        let c = vec!(3);
-        assert_eq!(div(&a, &b), (c, vec!(0)));
+        let c = vec!(0, 1);
+        assert_eq!(div(&a, &b), (c, vec!(1)));
+    }
+
+    #[test]
+    fn test_divide_two_numbers_with_carry() {
+        let a = vec!(20, 3);
+        let b = vec!(7);
+        let (d, r) = short_div(&a, &b);
+        println!("Divisor: {}, remainder: {:?}", d, r);
+        assert_eq!(div(&a, &b), (vec!(d), r));
+
     }
 
     #[test]
@@ -374,6 +407,11 @@ mod tests {
         let b = [SEVEN];
         assert_eq!(short_div(&a, &b), (3, vec!(0)));
 
+        let a = vec!(20, 3);
+        let b = vec!(7);
+        let (d, r) = short_div(&a, &b);
+        println!("Divisor: {}, remainder: {:?}", d, r);
+        assert_eq!(0, 1);
     }
 
     // 3 * SEVEN = 3 * (BASE - 3) = 3 * BASE - 9 = 2 * BASE + (BASE - 9)
@@ -387,6 +425,21 @@ mod tests {
         assert_eq!(short_div(&a, &b), (1, vec!(111)));
         assert_eq!(short_div(&c, &b), (0, vec!(14)));
         assert_eq!(short_div(&a, &c), (16, vec!(10)));
+    }
+
+    #[test]
+    fn test_normalize() {
+        let mut a = vec!(1, 0, 2, 0, 0);
+        let mut b = vec!(0, 0);
+        let mut c = vec!(1, 0, 2);
+
+        normalize(&mut a);
+        normalize(&mut b);
+        normalize(&mut c);
+
+        assert_eq!(a, vec!(1, 0, 2));
+        assert_eq!(b, vec!(0));
+        assert_eq!(c, vec!(1, 0, 2));
     }
 
 }

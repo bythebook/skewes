@@ -1,7 +1,7 @@
 use std::convert::From;
 use std::cmp::{Ord, Ordering};
 
-mod slice;
+pub mod slice;
 
 #[derive(Debug,PartialEq,Eq,Clone)]
 pub struct BigUint {
@@ -64,9 +64,7 @@ impl BigUint {
     pub fn sub(&self, other: &Self) -> Option<Self> {
         match slice::sub(&self.digits, &other.digits) {
             Some(result) => {
-                let mut ret = Self::from(result);
-                ret.normalize();
-                Some(ret)
+                Some(Self::from(result))
             },
             None => None
         }
@@ -93,22 +91,6 @@ impl BigUint {
         }
     }
 
-
-
-    fn normalize(&mut self) -> () {
-        // There might be a better way to do this. Using iterators, can't delete from vector while iterating.
-        // See contain-rs's 'Cursor' trait for a possible alternative to iterators
-        let mut last_index = self.digits.len();
-        for (index, digit) in self.digits.iter().rev().enumerate() {
-            if *digit > 0 { 
-                last_index = self.digits.len() - index; // Remember that this is a reverse iterator
-                break;
-            }
-        }
-        for _ in last_index..self.digits.len() {
-            self.digits.pop();
-        }
-    }
 }
 
 #[cfg(test)]
