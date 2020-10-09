@@ -1,5 +1,6 @@
 use std::convert::{TryFrom, TryInto};
 use std::cmp::Ordering;
+
 use crate::Natural;
 use crate::Sign;
 use crate::division_result::DivisionResult;
@@ -132,7 +133,9 @@ fn sub_slice(first: &[u64], second: &[u64]) -> Vec<u64> {
 pub fn sub_signed(first: &Natural, second: &Natural) -> (Sign, Natural) {
     match cmp_slice(&first.digits, &second.digits) {
         Ordering::Greater => (Sign::Positive, Natural::from(sub_slice(&first.digits, &second.digits))),
-        Ordering::Equal => (Sign::Positive, Natural::zero()),
+        Ordering::Equal => (Sign::Positive, Natural::from(sub_slice(&first.digits, &second.digits))),
+            // The reason I haven't returned zero directly here is that I don't want to check for 
+            // the special case within the division algorithm
         Ordering::Less => (Sign::Negative, Natural::from(sub_slice(&second.digits, &first.digits))),
     }
 }
@@ -153,20 +156,13 @@ pub fn div(p: &Natural, q: &Natural) -> (Natural, Natural) {
 
 pub fn mul_by_2_to_power_k(n: &Natural, k: u32) -> Natural {
     let mut carry = 0;
-    let low_mask  = 1<<k - 1;
+    let low_mask  = (1<<k) - 1;
     let high_mask = u64::MAX ^ low_mask;
     let mut new_digits = Vec::with_capacity(n.digits.len());
     for digit in n.digits.iter() {
         let result = digit.rotate_left(k);
         let new_carry = result & low_mask;
         new_digits.push(result & high_mask | carry);
-        println!("Result: {}, Existing Carry: {}, Low: {:x}, High: {:x}, New Digit: {}, New Carry: {}", 
-            result, 
-            carry,
-            low_mask,
-            high_mask, 
-            result & high_mask | carry, 
-            carry);
         carry = new_carry;
     }
     if carry != 0 {
@@ -177,7 +173,7 @@ pub fn mul_by_2_to_power_k(n: &Natural, k: u32) -> Natural {
 
 pub fn div_by_2_to_power_k(n: &Natural, k: u32) -> Natural {
     let mut carry = 0;
-    let low_mask  = 1<<(64-k) - 1;
+    let low_mask  = (1<<(64-k)) - 1;
     let high_mask = u64::MAX ^ low_mask;
     let mut new_digits = DivisionResult::new(n.digits.len());
     for digit in n.digits.iter().rev() {
@@ -194,13 +190,11 @@ pub fn div_by_2_to_power_k(n: &Natural, k: u32) -> Natural {
 }
 
 
-
-
 /// Returns the result (quotient, remainder) of p / q
 /// 
 /// q must be normalised
-/// TODO: enforce normalisation, as API will not require this
-pub fn div_normalised(p: &Natural, q: &Natural) -> (Natural, Natural) {
+fn div_normalised(p: &Natural, q: &Natural) -> (Natural, Natural) {
+    println!("p: {:?}, q: {:?}", p, q);
     let mut a = p.clone();
     let n = q.digits.len();
     if n > a.digits.len() {
@@ -219,7 +213,8 @@ pub fn div_normalised(p: &Natural, q: &Natural) -> (Natural, Natural) {
         }
 
         for j in (0..m).rev() {
-            println!("A: {}, {}; B: {}", a.digits[n+j], a.digits[n+j-1], q.digits[n-1]);
+            println!("j: {:?}", j);
+            println!("a: {:?}", a);
             let mut q_j = short_div(a.digits[n+j], a.digits[n+j-1], q.digits[n-1]);
             let mut sign: Sign;
             let (s, temp_a) = sub_signed(&a, &Natural::from(mul_by_single_digit(&q.digits, q_j, j as u64)));
@@ -234,7 +229,10 @@ pub fn div_normalised(p: &Natural, q: &Natural) -> (Natural, Natural) {
             digits.push(q_j);
         }
 
-        (Natural::from(digits), a)
+        let mut n = Natural::from(digits);
+        normalize(&mut n);
+        normalize(&mut a);
+        (n, a)
     }
 }
 
@@ -354,6 +352,12 @@ fn mul_with_carry(digita: u64, digitb: u64) -> (u64, u64) {
      u64::try_from(result >> 64).unwrap())
 }
 
+fn normalize(n: &mut Natural) {
+    while let Some(&0) = n.digits.last() {
+        n.digits.pop();
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -464,11 +468,6 @@ mod tests {
     }
 
     #[test]
-    fn test_divide_two_numbers_with_carry() {
-        assert_eq!(0, 1);
-    }
-
-    #[test]
     fn test_single_mul_temp() {
         const SEVEN: u64 = u64::MAX - 2;
         let a = SEVEN;
@@ -488,6 +487,9 @@ mod tests {
     fn test_mul_by_power_2() {
         let n = Natural::from(vec!(1, 7));
         assert_eq!(mul_by_2_to_power_k(&n, 3), Natural::from(vec!(8, 56)));
+
+        let n = Natural::from(156);
+        assert_eq!(mul_by_2_to_power_k(&n, 60), Natural::from(vec!(156 << 60, 156u64.rotate_left(60) & 0xff)))
     }
 
     #[test]
@@ -526,7 +528,17 @@ mod tests {
 
     #[test]
     fn test_normalize() {
-        assert_eq!(0, 1);
+        let mut a = Natural::from(vec!(1, 0, 0));
+        let mut b = Natural::from(vec!(0, 0, 2));
+        let mut c = Natural::from(vec!(0, 3, 0));
+
+        normalize(&mut a);
+        normalize(&mut b);
+        normalize(&mut c);
+
+        assert_eq!(a, Natural::from(vec!(1)));
+        assert_eq!(b, Natural::from(vec!(0, 0, 2)));
+        assert_eq!(c, Natural::from(vec!(0, 3)));
     }
 
     #[test]
@@ -590,5 +602,14 @@ mod tests {
         assert_eq!(digit_length(&b.digits), 3);
         assert_eq!(digit_length(&c.digits), 2);
         assert_eq!(digit_length(&d.digits), 4);
+    }
+
+    #[test]
+    fn test_div_by_ten() {
+        let a = Natural::from(156);
+        let b = Natural::from(10);
+        let (d, r) = div(&a, &b);
+        assert_eq!(d, Natural::from(15));
+        assert_eq!(r, Natural::from(6));
     }
 }

@@ -1,4 +1,9 @@
-use std::cmp::Ordering;
+use core::cmp::Ordering;
+use core::fmt;
+use core::convert::{TryFrom, TryInto};
+use core::iter::FromIterator;
+use core::ops::{Add, Mul, Div};
+use core::iter::Iterator;
 use crate::integer::Sign;
 use crate::algorithms::{add, mul, div, cmp_slice, sub_signed};
 
@@ -12,6 +17,22 @@ impl From<u64> for Natural {
     fn from(digit: u64) -> Self {
         Self {
             digits: vec!(digit),
+        }
+    }
+}
+
+impl TryFrom<Natural> for u32 {
+    type Error = &'static str;
+
+    fn try_from(n: Natural) -> Result<u32, Self::Error> {
+        if n.digits.len() == 0 {
+            Ok(0u32)
+        }
+        else if n.digits.len() == 1 {
+            Ok(n.digits[0] as u32)
+        }
+        else {
+            Err("Error converting a Natural to unsigned integer")
         }
     }
 }
@@ -36,11 +57,35 @@ impl PartialOrd for Natural {
     }
 }
 
+impl Add for &Natural {
+    type Output = Natural;
+
+    fn add(self, other: Self) -> Natural {
+        self.add(other)
+    }
+}
+
+impl Mul for &Natural {
+    type Output = Natural;
+
+    fn mul(self, other: Self) -> Natural {
+        self.mul(other)
+    }
+}
+
+impl Div for &Natural {
+    type Output = Natural;
+
+    fn div(self, other: Self) -> Natural {
+        self.div(other).0
+    }
+}
+
 impl Natural {
 
     pub fn zero() -> Self {
         Self {
-            digits: vec!(0),
+            digits: Vec::new(),
         }
     }
 
@@ -89,6 +134,30 @@ impl Natural {
         }
     }
 
+    // TODOs: change to potentially fail, chunk digits
+    pub fn from_string<S: Into<String>>(s: S) -> Self {
+        let mut n = Self::zero();
+        s.into().chars()
+                .for_each(|c| {
+                    let d: u32 = c.try_into().unwrap();
+                    n = &(&n * &Natural::from(10)) + &Natural::from(d as u64);
+                });
+        n
+    }
+}
+
+impl fmt::Display for Natural {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut n = self.clone();
+        let mut s = Vec::<char>::new();
+        while n != Natural::zero() {
+            let (d, r) = div(&n, &Natural::from(10));
+            let rem = u32::try_from(r).unwrap(); // Guaranteed to be correct because remainder < 10
+            s.push(std::char::from_digit(rem, 10).unwrap());
+            n = d;
+        }
+        write!(f, "{}", String::from_iter(s.iter().rev()))
+    }
 }
 
 #[cfg(test)]
@@ -110,7 +179,7 @@ mod tests {
     fn can_create_from_u64() {
         let a = Natural::from(42);
         let mut b = Natural::zero();
-        b.digits[0] = 42;
+        b.digits.push(42);
         assert_eq!(a, b);
     }
 
@@ -197,6 +266,14 @@ mod tests {
         let b = Natural::from(vec!(1, 2));
         let c = Natural::from(vec!(2));
         assert_eq!(a.sub(&b), Some(c));
+    }
+
+    #[test]
+    fn print_numbers () {
+        let a = Natural::from(vec!(3));
+        let b = Natural::from(vec!(156));
+        assert_eq!(a.to_string(), "3");
+        assert_eq!(b.to_string(), "156");
     }
 }
 
