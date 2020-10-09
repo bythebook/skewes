@@ -48,8 +48,6 @@ impl<'a> DivisionResult<'a> {
 impl From<DivisionResult<'_>> for Natural {
     fn from(array: DivisionResult) -> Natural {
         debug_assert!(array.length == array.capacity);
-        let zeroes = array.zeroes;
-        let size = array.capacity;
         let mut digits = array.data.to_vec();
         for _ in 1..array.zeroes+1 {
             digits.pop();
@@ -73,6 +71,7 @@ mod tests {
         assert_eq!(result, expected);
     }
 
+    #[test]
     fn test_leading_insignificant_zeroes() {
         let mut dr = DivisionResult::new(3);
         dr.push(0);

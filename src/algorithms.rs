@@ -1,4 +1,4 @@
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryFrom;
 use std::cmp::Ordering;
 
 use crate::Natural;
@@ -497,7 +497,7 @@ mod tests {
         let p = (4u128 << 64) | (4u128);
         let q = 2u128;
         let d = p/q;
-        let d64: u64 = (d & 0xffffffffffffffff).try_into().unwrap();
+        let d64 = u64::try_from(d & 0xffffffffffffffff).unwrap();
         assert_eq!(d, (2u128 << 64) | 2u128);
         assert_eq!(d64, 2u64);
 
