@@ -30,7 +30,7 @@ impl Iterator for Range {
         else {
             None
         };
-        self.current = &self.current + &Natural::one();
+        self.current = &self.current + &Natural::from(1);
         value
     }
 }

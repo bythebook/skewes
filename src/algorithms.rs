@@ -5,24 +5,24 @@ use crate::Natural;
 use crate::Sign;
 use crate::division_result::DivisionResult;
 
+#[inline]
 pub fn add(a: &[u64], b: &[u64]) -> Vec<u64> {
-    let first: &[u64];
-    let second: &[u64];
     // Order numbers so that first is the one with the greater number of digits
     if a.len() < b.len() {
-        first  = b;
-        second = a;
+        _add(b, a)
     }
     else {
-        first  = a;
-        second = b;
+        _add(a, b)
     }
+}
 
-    let mut result = Vec::with_capacity(first.len()); 
+#[inline]
+fn _add(a: &[u64], b: &[u64]) -> Vec<u64> {
+    let mut result = Vec::with_capacity(a.len()); 
     // Allocate the exact required f
 
-    let mut firstiter = first.iter();
-    let mut seconditer = second.iter();
+    let mut firstiter = a.iter();
+    let mut seconditer = b.iter();
     let mut carry = false;
 
     // Add digits of the second number to the first
@@ -72,6 +72,42 @@ pub fn add(a: &[u64], b: &[u64]) -> Vec<u64> {
     }
 
     result
+}
+
+#[inline]
+pub fn add_mut(a: &mut [u64], b: &[u64]) -> bool {
+    let mut firstiter = a.iter_mut();
+    let mut seconditer = b.iter();
+    let mut carry = false;
+
+    // Add digits of the second number to the first
+    loop {
+        match seconditer.next() {
+            Some(seconddigit) => {
+                let firstdigit = firstiter.next().unwrap();
+                let (a, b) = add_with_carry(*firstdigit, *seconddigit, carry);
+                carry = b;
+                *firstdigit = a;
+            }
+            None => break,
+        }
+    }
+
+    // Propagate any left over carries from the second number to the first
+    loop {
+        match firstiter.next() {
+            Some(firstdigit) => {
+                let (a, b) = add_with_carry(*firstdigit, 0, carry);
+                carry = b;
+                match carry {
+                    true => *firstdigit = a,
+                    false => {*firstdigit = a; break;}
+                }
+            },
+            None => return carry
+        }
+    }
+    carry
 }
 
 pub fn mul(a: &[u64], b: &[u64]) -> Vec<u64> {
@@ -141,7 +177,7 @@ pub fn sub_signed(first: &Natural, second: &Natural) -> (Sign, Natural) {
 }
 
 pub fn div(p: &Natural, q: &Natural) -> (Natural, Natural) {
-    if *q == Natural::zero() {
+    if *q == Natural::ZERO {
         panic!("Divide by zero");
     }
     let msd = q.digits.last().unwrap(); // Unwrap works when non-zero
@@ -200,7 +236,7 @@ fn div_normalised(p: &Natural, q: &Natural) -> (Natural, Natural) {
     let mut a = p.clone();
     let n = q.digits.len();
     if n > a.digits.len() {
-        (Natural::zero(), q.clone())
+        (Natural::ZERO, q.clone())
     }
     else {
         let m = a.digits.len() - n;
@@ -395,6 +431,58 @@ mod tests {
         assert_eq!(carry, true);
     }
 
+    /*
+    -----------------------------------------
+    Test slice addition
+    -----------------------------------------
+    */
+
+    #[test]
+    fn add_mut_same_size_numbers() {
+        let mut a = [1, 2, 3];
+        let b = [4, 5, 6];
+        let c = [5, 7, 9];
+
+        add_mut(&mut a, &b);
+        assert_eq!(a, c);
+    }
+
+    #[test]
+    fn add_mut_same_size_numbers_w_carry() {
+        let mut a = [NINE, 2, 3];
+        let b = [NINE, 5, 6];
+        let c = [EIGHT, 8, 9];
+
+        add_mut(&mut a, &b);
+        assert_eq!(a, c);
+    }
+
+    #[test]
+    fn add_mut_different_size_numbers() {
+        let mut a = [1, 2, 3, 4, 5];
+        let b = [4, 5, 6];
+        let c = [5, 7, 9, 4, 5];
+
+        add_mut(&mut a, &b);
+        assert_eq!(a, c);
+    }
+
+    #[test]
+    fn add_mut_different_size_numbers_w_carry() {
+        let mut a = [1, 2, NINE, 4, 5];
+        let b = [4, 5, NINE];
+        let c = [5, 7, EIGHT, 5, 5];
+
+        add_mut(&mut a, &b);
+        assert_eq!(a, c);
+    }
+
+    /*
+    ------------------------------------
+    Multiplication with carry tests
+    ------------------------------------
+    */
+
     #[test]
     fn test_multiply_with_carry() {
         let a = NINE;
@@ -456,7 +544,7 @@ mod tests {
         let a = Natural::from(vec!(1<<63, 1<<63));
         let b = Natural::from(vec!(1<<63));
         let c = Natural::from(vec!(1, 1));
-        assert_eq!(div(&a, &b), (c, Natural::zero()));
+        assert_eq!(div(&a, &b), (c, Natural::ZERO));
     }
 
     #[test]
@@ -464,7 +552,7 @@ mod tests {
         let a = Natural::from(vec!(1, 7));
         let b = Natural::from(vec!(7));
         let c = Natural::from(vec!(0, 1));
-        assert_eq!(div(&a, &b), (c, Natural::one()));
+        assert_eq!(div(&a, &b), (c, Natural::from(1)));
     }
 
     #[test]

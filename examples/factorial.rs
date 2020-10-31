@@ -1,15 +1,15 @@
 use skewes::Natural;
 
 fn factorial(n: Natural) -> Natural {
-    if n == Natural::one() {
-        Natural::one()
+    if n == Natural::from(1) {
+        Natural::from(1)
     }
     else {
-        let mut acc = Natural::one();
+        let mut acc = Natural::from(1);
         let mut m = n.clone();
-        while m > Natural::zero() {
+        while m > Natural::ZERO {
             acc = &acc * &m;
-            m = m.sub(&Natural::one()).unwrap();
+            m = m.sub(&Natural::from(1)).unwrap();
         }
         acc
     }

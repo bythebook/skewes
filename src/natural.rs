@@ -46,12 +46,14 @@ impl From<Vec<u64>> for Natural {
 }
 
 impl Ord for Natural {
+    #[inline]
     fn cmp(&self, other: &Self) -> Ordering {
         cmp_slice(&self.digits, &other.digits)
     }
 }
 
 impl PartialOrd for Natural {
+    #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
@@ -60,6 +62,7 @@ impl PartialOrd for Natural {
 impl Add for &Natural {
     type Output = Natural;
 
+    #[inline]
     fn add(self, other: Self) -> Natural {
         self.add(other)
     }
@@ -68,6 +71,7 @@ impl Add for &Natural {
 impl Sub for &Natural {
     type Output = Natural;
 
+    #[inline]
     fn sub(self, other: Self) -> Natural {
         match sub_signed(self, other) {
             (Sign::Positive, result) => result,
@@ -80,6 +84,7 @@ impl Sub for &Natural {
 impl Mul for &Natural {
     type Output = Natural;
 
+    #[inline]
     fn mul(self, other: Self) -> Natural {
         self.mul(other)
     }
@@ -88,6 +93,7 @@ impl Mul for &Natural {
 impl Div for &Natural {
     type Output = Natural;
 
+    #[inline]
     fn div(self, other: Self) -> Natural {
         self.div(other).0
     }
@@ -96,6 +102,7 @@ impl Div for &Natural {
 impl Rem for &Natural {
     type Output = Natural;
 
+    #[inline]
     fn rem(self, other: Self) -> Natural {
         self.div(other).1
     }
@@ -103,17 +110,7 @@ impl Rem for &Natural {
 
 impl Natural {
 
-    pub fn zero() -> Self {
-        Self {
-            digits: Vec::new(),
-        }
-    }
-
-    pub fn one() -> Self {
-        Self {
-            digits: vec!(1),
-        }
-    }
+    pub const ZERO : Natural = Self {digits: Vec::new()};
 
     pub fn add(&self, other: &Self) -> Self {
         let result = add(&self.digits, &other.digits);
@@ -156,7 +153,7 @@ impl Natural {
 
     // TODOs: change to potentially fail, chunk digits
     pub fn from_string<S: Into<String>>(s: S) -> Self {
-        let mut n = Self::zero();
+        let mut n = Self::ZERO;
         s.into().chars()
             .for_each(|c| {
                 let d: u32 = c.to_digit(10).unwrap();
@@ -170,7 +167,7 @@ impl fmt::Display for Natural {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut n = self.clone();
         let mut s = Vec::<char>::new();
-        while n != Natural::zero() {
+        while n != Natural::ZERO {
             let (d, r) = div(&n, &Natural::from(10));
             let rem = u32::try_from(r).unwrap(); // Guaranteed to be correct because remainder < 10
             s.push(std::char::from_digit(rem, 10).unwrap());
@@ -198,7 +195,7 @@ mod tests {
     #[test]
     fn can_create_from_u64() {
         let a = Natural::from(42);
-        let mut b = Natural::zero();
+        let mut b = Natural::ZERO;
         b.digits.push(42);
         assert_eq!(a, b);
     }
