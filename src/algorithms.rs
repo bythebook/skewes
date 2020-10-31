@@ -44,10 +44,7 @@ fn _add(a: &[u64], b: &[u64]) -> Vec<u64> {
             Some(firstdigit) => {
                 let (a, b) = add_with_carry(*firstdigit, 0, carry);
                 carry = b;
-                match carry {
-                    true => result.push(a),
-                    false => {result.push(a); break;}
-                }
+                result.push(a);
             },
             None => {
                 if carry {
@@ -56,19 +53,6 @@ fn _add(a: &[u64], b: &[u64]) -> Vec<u64> {
                 return result;
             }
         }
-    }
-
-    // Add remaining digits of the first number to the result
-    loop {
-        match firstiter.next() {
-            Some(firstdigit) => result.push(*firstdigit),
-            None => break,
-        }
-    }
-
-    // Add the final one if there are any remaining carries
-    if carry {
-        result.push(1);
     }
 
     result
@@ -99,14 +83,12 @@ pub fn add_mut(a: &mut [u64], b: &[u64]) -> bool {
             Some(firstdigit) => {
                 let (a, b) = add_with_carry(*firstdigit, 0, carry);
                 carry = b;
-                match carry {
-                    true => *firstdigit = a,
-                    false => {*firstdigit = a; break;}
-                }
+                *firstdigit = a;
             },
-            None => return carry
+            None => break,
         }
     }
+
     carry
 }
 
