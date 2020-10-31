@@ -141,7 +141,10 @@ pub fn sub_signed(first: &Natural, second: &Natural) -> (Sign, Natural) {
 }
 
 pub fn div(p: &Natural, q: &Natural) -> (Natural, Natural) {
-    let msd = q.digits.last().unwrap();
+    if *q == Natural::zero() {
+        panic!("Divide by zero");
+    }
+    let msd = q.digits.last().unwrap(); // Unwrap works when non-zero
     let zeroes = msd.leading_zeros();
     if zeroes == 0 {
         div_normalised(p, q)
@@ -194,7 +197,6 @@ pub fn div_by_2_to_power_k(n: &Natural, k: u32) -> Natural {
 /// 
 /// q must be normalised
 fn div_normalised(p: &Natural, q: &Natural) -> (Natural, Natural) {
-    println!("p: {:?}, q: {:?}", p, q);
     let mut a = p.clone();
     let n = q.digits.len();
     if n > a.digits.len() {
@@ -213,8 +215,6 @@ fn div_normalised(p: &Natural, q: &Natural) -> (Natural, Natural) {
         }
 
         for j in (0..m).rev() {
-            println!("j: {:?}", j);
-            println!("a: {:?}", a);
             let mut q_j = short_div(a.digits[n+j], a.digits[n+j-1], q.digits[n-1]);
             let mut sign: Sign;
             let (s, temp_a) = sub_signed(&a, &Natural::from(mul_by_single_digit(&q.digits, q_j, j as u64)));

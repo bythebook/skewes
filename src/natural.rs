@@ -1,8 +1,8 @@
 use core::cmp::Ordering;
 use core::fmt;
-use core::convert::{TryFrom, TryInto};
+use core::convert::TryFrom;
 use core::iter::FromIterator;
-use core::ops::{Add, Mul, Div};
+use core::ops::{Add, Sub, Mul, Div, Rem};
 use core::iter::Iterator;
 use crate::integer::Sign;
 use crate::algorithms::{add, mul, div, cmp_slice, sub_signed};
@@ -29,7 +29,7 @@ impl TryFrom<Natural> for u32 {
             Ok(0u32)
         }
         else if n.digits.len() == 1 {
-            Ok(n.digits[0] as u32)
+            Ok(n.digits[0] as u32) 
         }
         else {
             Err("Error converting a Natural to unsigned integer")
@@ -65,6 +65,18 @@ impl Add for &Natural {
     }
 }
 
+impl Sub for &Natural {
+    type Output = Natural;
+
+    fn sub(self, other: Self) -> Natural {
+        match sub_signed(self, other) {
+            (Sign::Positive, result) => result,
+            (Sign::Negative, _) => panic!("Tried to subtract larger natural from smaller natural. 
+                                                Maybe you meant to use the Integer type?"),
+        }
+    }
+}
+
 impl Mul for &Natural {
     type Output = Natural;
 
@@ -78,6 +90,14 @@ impl Div for &Natural {
 
     fn div(self, other: Self) -> Natural {
         self.div(other).0
+    }
+}
+
+impl Rem for &Natural {
+    type Output = Natural;
+
+    fn rem(self, other: Self) -> Natural {
+        self.div(other).1
     }
 }
 
@@ -138,10 +158,10 @@ impl Natural {
     pub fn from_string<S: Into<String>>(s: S) -> Self {
         let mut n = Self::zero();
         s.into().chars()
-                .for_each(|c| {
-                    let d: u32 = c.try_into().unwrap();
-                    n = &(&n * &Natural::from(10)) + &Natural::from(d as u64);
-                });
+            .for_each(|c| {
+                let d: u32 = c.to_digit(10).unwrap();
+                n = &(&n * &Natural::from(10)) + &Natural::from(d as u64);
+            });
         n
     }
 }
@@ -274,6 +294,14 @@ mod tests {
         let b = Natural::from(vec!(156));
         assert_eq!(a.to_string(), "3");
         assert_eq!(b.to_string(), "156");
+    }
+
+
+    #[test]
+    fn can_parse_integers () {
+        let n = Natural::from_string("1234");
+        let m = Natural::from(1234);
+        assert_eq!(n, m);
     }
 }
 

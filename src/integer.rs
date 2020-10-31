@@ -1,9 +1,10 @@
-#[allow(unused)]
 use core::ops::{Add, Mul, Sub, Div};
 use core::convert::From;
 
 use crate::natural::Natural;
-use crate::algorithms::sub_signed;
+use crate::algorithms::{sub_signed, div};
+
+//pub struct ParseError(String);
 
 #[derive(Debug,Eq,PartialEq,Copy,Clone)]
 pub enum Sign {
@@ -11,10 +12,44 @@ pub enum Sign {
     Negative,
 }
 
+impl Sign {
+    pub fn negate(self) -> Self {
+        match self {
+            Sign::Positive => Self::Negative,
+            Sign::Negative => Self::Positive,
+        }
+    }
+}
+
 #[derive(Debug,Eq,PartialEq)]
 pub struct Integer {
     sign: Sign,
     size: Natural,
+}
+
+impl Integer {
+    pub fn from_string<S: Into<String>>(s: S) -> Self {
+        let mut sign = Sign::Positive;
+        let chars = s.into();
+        for (count, ch) in chars.chars().enumerate() {
+            if ch == '-' {
+                sign = sign.negate();
+            }
+            else if ch == ' ' {
+                // Do nothing
+            }
+            else if ch.is_digit(10) {
+                return Self {
+                    sign: sign, 
+                    size: Natural::from_string(&chars[count..])
+                }
+            }
+        }
+        return Self{
+            sign: sign, 
+            size: Natural::from(0),
+        };
+    }
 }
 
 impl From<Natural> for Integer {
@@ -70,6 +105,23 @@ impl Add<&Integer> for &Integer {
     }
 }
 
+impl Sub<&Integer> for &Integer {
+    type Output = Integer;
+
+    fn sub(self, other: &Integer) -> Integer {
+        let (sign, result) = match(self.sign, other.sign) {
+            (Sign::Positive, Sign::Positive) => sub_signed(&self.size, &other.size),
+            (Sign::Negative, Sign::Negative) => sub_signed(&other.size, &self.size),
+            (Sign::Positive, Sign::Negative) => (Sign::Positive, &self.size + &other.size),
+            (Sign::Negative, Sign::Positive) => (Sign::Negative, &self.size + &other.size),
+        };
+        Integer {
+            sign: sign,
+            size: result,
+        }
+    }
+}
+
 impl Mul<&Integer> for &Integer {
     type Output = Integer;
 
@@ -77,6 +129,18 @@ impl Mul<&Integer> for &Integer {
         Integer {
             sign: self.sign * other.sign,
             size: &self.size * &other.size,
+        }
+    }
+}
+
+impl Div<&Integer> for &Integer {
+    type Output = Integer;
+
+    fn div(self, other: &Integer) -> Integer {
+        let (d, _r) = div(&self.size, &other.size);
+        Integer {
+            sign: self.sign * other.sign,
+            size: d,
         }
     }
 }
@@ -114,6 +178,56 @@ mod tests {
     }
 
     #[test]
+    fn test_sub_positive_positive_eq_positive() {
+        let a = Integer{sign: Sign::Positive, size: Natural::from(400)};
+        let b = Integer{sign: Sign::Positive, size: Natural::from(100)};
+        assert_eq!(&a - &b, Integer{sign: Sign::Positive, size: Natural::from(300)});
+    }
+
+    #[test]
+    fn test_sub_positive_positive_eq_negative() {
+        let a = Integer{sign: Sign::Positive, size: Natural::from(100)};
+        let b = Integer{sign: Sign::Positive, size: Natural::from(400)};
+        assert_eq!(&a - &b, Integer{sign: Sign::Negative, size: Natural::from(300)});
+    }
+
+    #[test]
+    fn test_sub_positive_negative() {
+        let a = Integer{sign: Sign::Positive, size: Natural::from(400)};
+        let b = Integer{sign: Sign::Negative, size: Natural::from(100)};
+        assert_eq!(&a - &b, Integer{sign: Sign::Positive, size: Natural::from(500)});
+        
+        let a = Integer{sign: Sign::Positive, size: Natural::from(100)};
+        let b = Integer{sign: Sign::Negative, size: Natural::from(400)};
+        assert_eq!(&a - &b, Integer{sign: Sign::Positive, size: Natural::from(500)});
+    }
+
+    #[test]
+    fn test_sub_negative_positive() {
+        let a = Integer{sign: Sign::Negative, size: Natural::from(400)};
+        let b = Integer{sign: Sign::Positive, size: Natural::from(100)};
+        assert_eq!(&a - &b, Integer{sign: Sign::Negative, size: Natural::from(500)});
+
+        let a = Integer{sign: Sign::Negative, size: Natural::from(100)};
+        let b = Integer{sign: Sign::Positive, size: Natural::from(400)};
+        assert_eq!(&a - &b, Integer{sign: Sign::Negative, size: Natural::from(500)});
+    }
+
+    #[test]
+    fn test_sub_negative_negative_eq_positive() {
+        let a = Integer{sign: Sign::Negative, size: Natural::from(100)};
+        let b = Integer{sign: Sign::Negative, size: Natural::from(400)};
+        assert_eq!(&a - &b, Integer{sign: Sign::Positive, size: Natural::from(300)});
+    }
+
+    #[test]
+    fn test_sub_negative_negative_eq_negative() {
+        let a = Integer{sign: Sign::Negative, size: Natural::from(400)};
+        let b = Integer{sign: Sign::Negative, size: Natural::from(100)};
+        assert_eq!(&a - &b, Integer{sign: Sign::Negative, size: Natural::from(300)});
+    }
+
+    #[test]
     fn test_mul_positive_positive() {
         let a = Integer{sign: Sign::Positive, size: Natural::from(20)};
         let b = Integer{sign: Sign::Positive, size: Natural::from(10)};
@@ -122,7 +236,17 @@ mod tests {
 
     #[test]
     fn test_mul_positive_negative() {
-        
+        let a = Integer{sign: Sign::Positive, size: Natural::from(20)};
+        let b = Integer{sign: Sign::Negative, size: Natural::from(10)};
+        assert_eq!(&a * &b, Integer{sign: Sign::Negative, size: Natural::from(200)});
+    }
+
+    #[test]
+    fn test_can_parse_string() {
+        let one_hundred = Integer::from_string("100");
+        let minus_five = Integer::from_string("-5");
+        assert_eq!(one_hundred, Integer{sign: Sign::Positive, size: Natural::from(100)});
+        assert_eq!(minus_five, Integer{sign: Sign::Negative, size: Natural::from(5)});
     }
 }
 
