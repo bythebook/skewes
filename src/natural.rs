@@ -5,7 +5,11 @@ use core::iter::FromIterator;
 use core::ops::{Add, Sub, Mul, Div, Rem};
 use core::iter::Iterator;
 use crate::integer::Sign;
-use crate::algorithms::{add, mul, div, cmp_slice, sub_signed};
+use crate::algorithms::{
+    add, add_mut,
+    sub_signed,
+    mul, div, cmp_slice,
+};
 
 #[derive(Debug,PartialEq,Eq,Clone)]
 pub struct Natural {
@@ -56,6 +60,15 @@ impl PartialOrd for Natural {
     #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
+    }
+}
+
+impl Add for Natural {
+    type Output = Natural;
+
+    #[inline]
+    fn add(self, other: Self) -> Natural {
+        self.add_mut(&other)
     }
 }
 
@@ -115,6 +128,12 @@ impl Natural {
     pub fn add(&self, other: &Self) -> Self {
         let result = add(&self.digits, &other.digits);
         Self::from(result)
+    }
+
+    pub fn add_mut(self, other: &Self) -> Natural {
+        let mut new_digits = self.digits; // Move self.digits
+        add_mut(&mut new_digits, &other.digits); // Now can take mutable borrow
+        Self::from(new_digits) // Return wrapped result
     }
 
     pub fn sub(&self, other: &Self) -> Option<Self> {
