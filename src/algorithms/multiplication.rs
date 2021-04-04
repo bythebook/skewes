@@ -1,8 +1,11 @@
-use std::convert::TryFrom; // For downcasting u128 to u64
+use core::convert::TryFrom; // For downcasting u128 to u64
+use core::cmp::min;
 use super::{add, add_mut};
+use super::subtraction::sub_slice;
+use super::util::shl_mut_vec;
 
 pub fn mul(a: &[u64], b: &[u64]) -> Vec<u64> {
-    let mut accumulator = vec!(0);
+    let mut accumulator = Vec::new();
     let mut significance = 0;
     for digit in a.iter() {
         let result = mul_by_single_digit(b, *digit, significance);
@@ -10,6 +13,36 @@ pub fn mul(a: &[u64], b: &[u64]) -> Vec<u64> {
         significance += 1;
     }
     accumulator
+}
+
+
+fn karatsuba(a: &[u64], b: &[u64]) -> Vec<u64> {
+    // Make recursive
+    let x = a; let y = b;
+    let n = min(x.len(), y.len());
+    let result : Vec<u64>;
+    if n > 16 {
+        // Split x = x_1 * B^[n/2] + x_0;
+        //       y = y_1 * B^[n/2] + y_0;
+        // where B is the base (2^64)
+        let (x_0, x_1) = x.split_at(n / 2); // Little-endian
+        let (y_0, y_1) = y.split_at(n / 2); // Little-endian
+
+        let mut z_2 = karatsuba(x_1, y_1);
+        let z_0 = karatsuba(x_0, y_0);
+        let z = karatsuba(&add(x_0, x_1), &add(y_0, y_1));
+        let mut z_1 = sub_slice(&sub_slice(&z, &z_2), &z_0);
+        shl_mut_vec(&mut z_2, n);
+        shl_mut_vec(&mut z_1, n/2);
+        add_mut(&mut z_2, &z_1);
+        add_mut(&mut z_2, &z_0);
+        result = z_2;
+    }
+    else {
+        result = mul(&x, &y);
+    }
+
+    result
 }
 
 // Multiply a slice by a single u64 digit, allowing for significance number of zeroes at the start
@@ -102,5 +135,23 @@ mod tests {
         let a = [SEVEN];
         let b = [3];
         assert_eq!(mul(&a, &b), [u64::MAX - 8, 2]);
+    }
+
+    /*
+     ----------------------------------
+     Test Karatsuba Multiplication
+     ----------------------------------
+     */
+    #[test]
+    fn test_karatsuba_big() {
+        let a = [1, 2, 3, 4, 5, 6, 7, 8,
+                 9, 10, 11, 12, 13, 14, 15, 16];
+        let b = [16, 15, 14, 13, 12, 11, 10, 9,
+                 8, 7, 6, 5, 4, 3, 2, 1];
+        assert_eq!(karatsuba(&a, &b), 
+                   vec!(16, 47, 92, 150, 220, 301, 392, 492, 600,
+                        715, 836, 962, 1092, 1225, 1360, 1496, 
+                        1360, 1225, 1092, 962, 836, 715, 600, 
+                        492, 392, 301, 220, 150, 92, 47, 16));
     }
 }

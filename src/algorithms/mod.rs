@@ -3,6 +3,7 @@ mod comparison;
 mod division;
 mod multiplication;
 mod subtraction;
+mod util;
 pub use addition::{add, add_mut};
 pub use comparison::cmp_slice;
 pub use division::div;

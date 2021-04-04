@@ -4,6 +4,7 @@ use crate::Sign;
 use crate::division_result::DivisionResult;
 use super::multiplication::mul_by_single_digit;
 use super::subtraction::{sub_signed,sub_slice_assign};
+use super::util::shl;
 
 #[inline]
 pub fn div(p: &Natural, q: &Natural) -> (Natural, Natural) {
@@ -121,17 +122,7 @@ fn short_div(p_1: u64, p_0: u64, q_0: u64) -> u64 {
     }
 }
 
-pub fn shl(p: &Natural, n: usize) -> Natural {
-    let mut q = p.clone();
-    shl_mut(&mut q, n);
-    q
-}
 
-pub fn shl_mut(p: &mut Natural, n: usize) {
-    for _ in 1..(n+1) { // n times
-        p.digits.insert(0, 0); // Insert a zero in the first position (least significant digit)
-    }
-}
 
 fn normalize(n: &mut Natural) {
     while let Some(&0) = n.digits.last() {

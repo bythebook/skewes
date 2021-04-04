@@ -24,7 +24,7 @@ pub (in crate::algorithms) fn sub_slice_assign(first: &mut [u64], second: &[u64]
 }
 
 #[inline]
-fn sub_slice(first: &[u64], second: &[u64]) -> Vec<u64> {
+pub (in crate::algorithms) fn sub_slice(first: &[u64], second: &[u64]) -> Vec<u64> {
     let mut carry: bool = false;
     let mut result: Vec<u64> = Vec::with_capacity(first.len());
 
