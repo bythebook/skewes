@@ -47,6 +47,8 @@ fn _add(a: &[u64], b: &[u64]) -> Vec<u64> {
     result
 }
 
+// Contract: add_mut expects a to be sized so that it has at least enough room
+// to hold the result of a + b
 #[inline]
 pub fn add_mut(a: &mut [u64], b: &[u64]) -> bool {
     let mut firstiter = a.iter_mut();
@@ -62,7 +64,7 @@ pub fn add_mut(a: &mut [u64], b: &[u64]) -> bool {
     }
 
     // Propagate any left over carries from the second number to the first
-    for first_digit in firstiter {
+    for first_digit in firstiter { // Beginning at current position in first
         let (a, b) = add_with_carry(*first_digit, 0, carry);
         carry = b;
         *first_digit = a;

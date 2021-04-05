@@ -13,7 +13,7 @@ pub fn mul(a: &[u64], b: &[u64]) -> Vec<u64> {
     accumulator
 }
 
-// Future feature
+// Future feature; want to make the multiplication non-recursive
 #[allow(dead_code)]
 fn karatsuba(a: &[u64], b: &[u64]) -> Vec<u64> {
     // Make recursive

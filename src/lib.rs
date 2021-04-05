@@ -21,7 +21,6 @@
 //! 
 //! println!("x = {}", x);
 //! 
-
 #![warn(clippy::all)]
 
 // Allow single-character variable names in functions

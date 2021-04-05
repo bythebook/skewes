@@ -76,15 +76,6 @@ impl PartialOrd for Natural {
     }
 }
 
-impl Add for Natural {
-    type Output = Natural;
-
-    #[inline]
-    fn add(self, other: Self) -> Natural {
-        self.add_mut(&other)
-    }
-}
-
 impl Add for &Natural {
     type Output = Natural;
 
@@ -149,10 +140,18 @@ impl Natural {
     ///
     /// Mutable addition - stores result in self
     /// 
-    pub fn add_mut(self, other: &Self) -> Natural {
-        let mut new_digits = self.digits; // Move self.digits
-        add_mut(&mut new_digits, &other.digits); // Now can take mutable borrow
-        Self::from(new_digits) // Return wrapped result
+    pub fn add_mut(&mut self, other: &Self) {
+        // We need to ensure here that self.digits is big enough to hold the result
+        // add_mut from algorithms expects this.
+        let new_len = std::cmp::max(self.digits.len(), other.digits.len());
+        self.digits.resize(new_len, 0);
+        // We now have enough non-significant zeroes that self.digits can hold the result
+        // of the addition up to the carry. If a carry is required, a further push
+        // will be done.
+        let carry = add_mut(&mut self.digits, &other.digits);
+        if carry {
+            self.digits.push(1);
+        }
     }
 
     /// 
