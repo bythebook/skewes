@@ -40,15 +40,15 @@ impl Integer {
             }
             else if ch.is_digit(10) {
                 return Self {
-                    sign: sign, 
+                    sign, 
                     size: Natural::from_string(&chars[count..])
                 }
             }
         }
-        return Self{
-            sign: sign, 
+        Self {
+            sign, 
             size: Natural::from(0),
-        };
+        }
     }
 }
 
@@ -90,15 +90,15 @@ impl Add<&Integer> for &Integer {
             (Sign::Negative, Sign::Positive) => {
                 let (sign, size) = sub_signed(&other.size, &self.size);
                 Integer {
-                    sign: sign,
-                    size: size,
+                    sign,
+                    size,
                 }
             },
             (Sign::Positive, Sign::Negative) => {
                 let (sign, size) = sub_signed(&self.size, &other.size);
                 Integer {
-                    sign: sign,
-                    size: size,
+                    sign,
+                    size,
                 }
             },
         }
@@ -116,7 +116,7 @@ impl Sub<&Integer> for &Integer {
             (Sign::Negative, Sign::Positive) => (Sign::Negative, &self.size + &other.size),
         };
         Integer {
-            sign: sign,
+            sign,
             size: result,
         }
     }
@@ -136,6 +136,10 @@ impl Mul<&Integer> for &Integer {
 impl Div<&Integer> for &Integer {
     type Output = Integer;
 
+    // Clippy thinks it's suspicious to use the multiplication operator
+    // in an implementation of division, but of course it's completely
+    // legitimate here.
+    #[allow(clippy::suspicious_arithmetic_impl)]
     fn div(self, other: &Integer) -> Integer {
         let (d, _r) = div(&self.size, &other.size);
         Integer {

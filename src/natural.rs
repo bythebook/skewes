@@ -11,11 +11,22 @@ use crate::algorithms::{
     mul, div, cmp_slice,
 };
 
+///
+/// A type representing a positive number with arbitrary precision
+/// 
+/// 
+/// # Example
+/// ```rust
+/// // Create a number from a string
+/// let n = Natural::from_string("123456789000000000");
+/// 
+/// // Create a number from a native Rust type
+/// let m = Natural::from(1234);
+/// 
 #[derive(Debug,PartialEq,Eq,Clone)]
 pub struct Natural {
     pub(crate) digits: Vec<u64>
 }
-
 
 impl From<u64> for Natural {
     fn from(digit: u64) -> Self {
@@ -29,7 +40,7 @@ impl TryFrom<Natural> for u32 {
     type Error = &'static str;
 
     fn try_from(n: Natural) -> Result<u32, Self::Error> {
-        if n.digits.len() == 0 {
+        if n.digits.is_empty() {
             Ok(0u32)
         }
         else if n.digits.len() == 1 {
@@ -44,7 +55,7 @@ impl TryFrom<Natural> for u32 {
 impl From<Vec<u64>> for Natural {
     fn from(digits: Vec<u64>) -> Self {
         Self {
-            digits: digits,
+            digits,
         }
     }
 }
@@ -125,6 +136,7 @@ impl Natural {
 
     pub const ZERO : Natural = Self {digits: Vec::new()};
 
+    
     pub fn add(&self, other: &Self) -> Self {
         let result = add(&self.digits, &other.digits);
         Self::from(result)
@@ -155,7 +167,7 @@ impl Natural {
     }
 
     // TODO: This increments a number in-place. Implement in-place addition for +=
-    pub fn inc(&mut self) -> () {
+    pub fn inc(&mut self) {
         let mut carry = false;
         for digit in &mut self.digits {
             let (a, b) = digit.overflowing_add(1);
@@ -218,7 +230,7 @@ mod tests {
         }
         else {
             let mut acc = Natural::from(1);
-            let mut m = n.clone();
+            let mut m = n;
             while m > Natural::ZERO {
                 acc = acc.mul(&m);
                 m = m.sub(&Natural::from(1)).unwrap();

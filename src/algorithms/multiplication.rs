@@ -6,16 +6,15 @@ use super::util::shl_mut_vec;
 
 pub fn mul(a: &[u64], b: &[u64]) -> Vec<u64> {
     let mut accumulator = Vec::new();
-    let mut significance = 0;
-    for digit in a.iter() {
-        let result = mul_by_single_digit(b, *digit, significance);
+    for (significance, digit) in a.iter().enumerate() {
+        let result = mul_by_single_digit(b, *digit, significance as u64);
         accumulator = add(&result, &accumulator);
-        significance += 1;
     }
     accumulator
 }
 
-
+// Future feature
+#[allow(dead_code)]
 fn karatsuba(a: &[u64], b: &[u64]) -> Vec<u64> {
     // Make recursive
     let x = a; let y = b;
@@ -48,12 +47,9 @@ fn karatsuba(a: &[u64], b: &[u64]) -> Vec<u64> {
 // Multiply a slice by a single u64 digit, allowing for significance number of zeroes at the start
 // Used to build up longhand multiplication
 pub fn mul_by_single_digit(digits: &[u64], digit: u64, significance: u64) -> Vec<u64> {
-    let mut result = Vec::new();
+    let mut result = vec![0;significance as usize];
     let mut msd: u64 = 0;
     let mut lsd: u64;
-    for _ in 1..(significance+1) {
-        result.push(0);
-    }
 
     for other_digit in digits.iter() {
         let (a, b) = mul_with_carry(*other_digit, digit);

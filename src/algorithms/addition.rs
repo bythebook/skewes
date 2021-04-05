@@ -15,20 +15,16 @@ fn _add(a: &[u64], b: &[u64]) -> Vec<u64> {
     // Allocate the exact required f
 
     let mut firstiter = a.iter();
-    let mut seconditer = b.iter();
+    let seconditer = b.iter();
     let mut carry = false;
 
+
     // Add digits of the second number to the first
-    loop {
-        match seconditer.next() {
-            Some(seconddigit) => {
-                let firstdigit = firstiter.next().unwrap();
-                let (a, b) = add_with_carry(*firstdigit, *seconddigit, carry);
-                carry = b;
-                result.push(a);
-            }
-            None => break,
-        }
+    for second_digit in seconditer {
+        let firstdigit = firstiter.next().unwrap();
+        let (a, b) = add_with_carry(*firstdigit, *second_digit, carry);
+        carry = b;
+        result.push(a);
     }
 
     // Propagate any left over carries from the second number to the first
@@ -54,32 +50,22 @@ fn _add(a: &[u64], b: &[u64]) -> Vec<u64> {
 #[inline]
 pub fn add_mut(a: &mut [u64], b: &[u64]) -> bool {
     let mut firstiter = a.iter_mut();
-    let mut seconditer = b.iter();
+    let seconditer = b.iter();
     let mut carry = false;
 
     // Add digits of the second number to the first
-    loop {
-        match seconditer.next() {
-            Some(seconddigit) => {
-                let firstdigit = firstiter.next().unwrap();
-                let (a, b) = add_with_carry(*firstdigit, *seconddigit, carry);
-                carry = b;
-                *firstdigit = a;
-            }
-            None => break,
-        }
+    for second_digit in seconditer {
+        let firstdigit = firstiter.next().unwrap();
+        let (a, b) = add_with_carry(*firstdigit, *second_digit, carry);
+        carry = b;
+        *firstdigit = a;
     }
 
     // Propagate any left over carries from the second number to the first
-    loop {
-        match firstiter.next() {
-            Some(firstdigit) => {
-                let (a, b) = add_with_carry(*firstdigit, 0, carry);
-                carry = b;
-                *firstdigit = a;
-            },
-            None => break,
-        }
+    for first_digit in firstiter {
+        let (a, b) = add_with_carry(*first_digit, 0, carry);
+        carry = b;
+        *first_digit = a;
     }
 
     carry

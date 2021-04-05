@@ -4,23 +4,20 @@ use core::cmp::Ordering;
 /// 
 /// Expects that the numbers passed are normalised to have no leading zeroes
 pub fn cmp_slice(first: &[u64], second: &[u64]) -> Ordering {
-    if first.len() > second.len() {
-        return Ordering::Greater
-    }
-    else if first.len() < second.len() {
-        return Ordering::Less
-    }
-    else {
-        let iter = first.iter().zip(second.iter());
-        for (digit, other_digit) in iter.rev() {
-            if *digit > *other_digit {
-                return Ordering::Greater
+    match first.len().cmp(&second.len()) {
+        Ordering::Greater => Ordering::Greater,
+        Ordering::Less => Ordering::Less,
+        _ => {
+            let iter = first.iter().zip(second.iter());
+            for (digit, other_digit) in iter.rev() {
+                match (*digit).cmp(other_digit) {
+                    Ordering::Greater => return Ordering::Greater,
+                    Ordering::Less => return Ordering::Less,
+                    _ => continue,
+                }
             }
-            else if *digit < *other_digit {
-                return Ordering::Less
-            }
-        }
-        Ordering::Equal
+            Ordering::Equal
+        },
     }
 }
 

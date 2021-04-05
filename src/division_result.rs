@@ -25,9 +25,9 @@ impl<'a> DivisionResult<'a> {
             std::slice::from_raw_parts_mut(ptr as *mut u64, capacity)
         };
         Self {
-            data: data,
+            data,
             length: 0,
-            capacity: capacity,
+            capacity,
             seen_nonzero: false,
             zeroes: 0,
         }

@@ -103,7 +103,7 @@ fn div_normalised(p: &Natural, q: &Natural) -> (Natural, Natural) {
             a = temp_a;
             while sign == Sign::Negative {
                 q_j -= 1;
-                let (s, temp_a) = sub_signed(&Natural::from(shl(&q, j)), &a);
+                let (s, temp_a) = sub_signed(&shl(&q, j), &a);
                 sign = s;
                 a = temp_a;
             }
@@ -149,7 +149,6 @@ mod tests {
     use core::convert::TryFrom;
 
     const NINE: u64 = u64::MAX;
-    const EIGHT: u64 = u64::MAX - 1;
 
     #[test]
     fn test_mul_by_power_2() {
