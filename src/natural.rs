@@ -17,6 +17,8 @@ use crate::algorithms::{
 /// 
 /// # Example
 /// ```rust
+/// use skewes::Natural;
+/// 
 /// // Create a number from a string
 /// let n = Natural::from_string("123456789000000000");
 /// 
@@ -133,21 +135,29 @@ impl Rem for &Natural {
 }
 
 impl Natural {
-
+    /// Zero
     pub const ZERO : Natural = Self {digits: Vec::new()};
 
-    
+    /// 
+    /// Immutable addition - allocates and stores result
+    /// 
     pub fn add(&self, other: &Self) -> Self {
         let result = add(&self.digits, &other.digits);
         Self::from(result)
     }
 
+    ///
+    /// Mutable addition - stores result in self
+    /// 
     pub fn add_mut(self, other: &Self) -> Natural {
         let mut new_digits = self.digits; // Move self.digits
         add_mut(&mut new_digits, &other.digits); // Now can take mutable borrow
         Self::from(new_digits) // Return wrapped result
     }
 
+    /// 
+    /// Immutable subtraction - allocates and stores result
+    /// 
     pub fn sub(&self, other: &Self) -> Option<Self> {
         let (sign, value) = sub_signed(&self, &other);
         match sign {
@@ -156,17 +166,23 @@ impl Natural {
         }
     }
 
-
+    /// 
+    /// Immutable multiplication - allocates and stores result
+    /// 
     pub fn mul(&self, other: &Self) -> Self {
         let result = mul(&self.digits, &other.digits);
         Self::from(result)
     }
 
+    /// Immutable division - allocates and stores result
     pub fn div(&self, other: &Self) -> (Self, Self) {
         div(&self, &other)
     }
 
-    // TODO: This increments a number in-place. Implement in-place addition for +=
+
+    ///
+    /// Increments a number in-place
+    /// 
     pub fn inc(&mut self) {
         let mut carry = false;
         for digit in &mut self.digits {
@@ -183,6 +199,12 @@ impl Natural {
     }
 
     // TODOs: change to potentially fail, chunk digits
+    ///
+    /// Parse a string into a Natural
+    /// 
+    /// The API for this function will likely change in the future,
+    /// allowing for errors while parsing
+    /// 
     pub fn from_string<S: Into<String>>(s: S) -> Self {
         let mut n = Self::ZERO;
         s.into().chars()

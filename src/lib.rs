@@ -28,6 +28,8 @@
 // This is a 'mathsy' coding style, decision to use this may be revisited in future
 #![allow(clippy::many_single_char_names)]
 
+#![warn(missing_docs)]
+
 mod natural;
 mod integer;
 mod algorithms;

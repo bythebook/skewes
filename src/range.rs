@@ -6,12 +6,31 @@
 use core::iter::Iterator;
 use crate::natural::Natural;
 
+///
+/// A range of positive integers
+/// 
+/// # Example
+/// ```rust
+/// use skewes::{Natural,Range};
+/// 
+/// // Create a range
+/// let numbers = Range::new(Natural::from(1), Natural::from(10));
+/// for number in numbers {
+///     println!("{}", number);
+/// }
+/// ```
+/// 
 pub struct Range {
     current: Natural,
     end: Natural,
 }
 
 impl Range {
+    ///
+    /// Create a new range [a,b)
+    /// 
+    /// The created range represents natural numbers greater than or equal to a
+    /// and strictly less than b
     pub fn new(a: Natural, b: Natural) -> Range {
         Self {
             current: a,
