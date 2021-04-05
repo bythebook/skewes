@@ -84,6 +84,18 @@ fn div_normalised(p: &Natural, q: &Natural) -> (Natural, Natural) {
         }
 
         for j in (0..m).rev() {
+            // Need to handle cases where we've had a near-exact division here
+            if a.digits.len() == 1 {
+                let last_digit = a.digits[0] / q.digits[n-1];
+                digits.push(last_digit);
+            }
+            if a == Natural::ZERO {
+                // Can we put all the remaining zeroes in at once?
+                digits.push(0);
+                continue;
+            }
+
+            // Otherwise we have lots of work to do
             let mut q_j = short_div(a.digits[n+j], a.digits[n+j-1], q.digits[n-1]);
             let mut sign: Sign;
             let (s, temp_a) = sub_signed(&a, &Natural::from(mul_by_single_digit(&q.digits, q_j, j as u64)));
@@ -220,5 +232,17 @@ mod tests {
         let (d, r) = div(&a, &b);
         assert_eq!(d, Natural::from(15));
         assert_eq!(r, Natural::from(6));
+    }
+
+    #[test]
+    fn test_div_three_digit_by_one_digit() {
+        // This test case arose in calculating factorial(100) and trying to print
+        // The regression in this case was that the test result was actually 0, rather
+        // than the expected here.
+        let p = Natural::from(vec!(0, 0, 4788272403190906880));
+        let q = Natural::from(11529215046068469760);
+        assert_eq!(p.div(&q), (Natural::from(vec!(0, 7661235845105451008)), 
+                               Natural::ZERO)
+        );
     }
 }

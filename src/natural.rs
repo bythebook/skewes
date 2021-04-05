@@ -211,6 +211,22 @@ mod tests {
         );
     }
 
+    // Calculate large factorials; good overall sense-check
+    fn factorial(n: Natural) -> Natural {
+        if n == Natural::from(1) {
+            Natural::from(1)
+        }
+        else {
+            let mut acc = Natural::from(1);
+            let mut m = n.clone();
+            while m > Natural::ZERO {
+                acc = acc.mul(&m);
+                m = m.sub(&Natural::from(1)).unwrap();
+            }
+            acc
+        }
+    }
+
     #[test]
     fn can_create_from_u64() {
         let a = Natural::from(42);
@@ -318,6 +334,15 @@ mod tests {
         let n = Natural::from_string("1234");
         let m = Natural::from(1234);
         assert_eq!(n, m);
+    }
+
+    #[test]
+    fn can_calculate_big_factorials() {
+        let n = Natural::from(100);
+        let ans = factorial(n);
+        assert_eq!(ans, Natural::from_string(
+            "93326215443944152681699238856266700490715968264381621468592963895217599993229915608941463976156518286253697920827223758251185210916864000000000000000000000000"
+        ))
     }
 }
 
