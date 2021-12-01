@@ -39,3 +39,5 @@ pub use natural::Natural;
 pub use integer::Sign;
 pub use integer::Integer;
 pub use range::Range;
+
+use natural::Limb;

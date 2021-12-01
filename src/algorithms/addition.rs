@@ -1,3 +1,5 @@
+use crate::Limb;
+
 #[inline]
 pub fn add(a: &[u64], b: &[u64]) -> Vec<u64> {
     // Order numbers so that first is the one with the greater number of digits
@@ -9,11 +11,14 @@ pub fn add(a: &[u64], b: &[u64]) -> Vec<u64> {
     }
 }
 
+/// Add together two slices, allocating a new vector to hold the result.
 #[inline]
-fn _add(a: &[u64], b: &[u64]) -> Vec<u64> {
-    let mut result = Vec::with_capacity(a.len()); 
-    // Allocate the exact required f
-
+fn _add(a: &[Limb], b: &[Limb]) -> Vec<Limb> {
+    // We try not to do too many carries or two much branching here, so we just allocate
+    // a vector at least one bigger than it needs to be
+    // It might be good to revisit this in future and see if this is optimal for, e.g.
+    // repeated additions. (For these, a pattern of mutable addition may be best anyway)
+    let mut result = Vec::with_capacity(a.len() + 1);
     let mut firstiter = a.iter();
     let seconditer = b.iter();
     let mut carry = false;
@@ -47,10 +52,12 @@ fn _add(a: &[u64], b: &[u64]) -> Vec<u64> {
     result
 }
 
-// Contract: add_mut expects a to be sized so that it has at least enough room
-// to hold the result of a + b
+/// Add a and b, storing the result in a
+/// 
+/// Contract: add_mut expects a to be sized so that it has at least enough room
+/// to hold the result of a + b
 #[inline]
-pub fn add_mut(a: &mut [u64], b: &[u64]) -> bool {
+pub fn add_mut(a: &mut [Limb], b: &[Limb]) -> bool {
     let mut firstiter = a.iter_mut();
     let seconditer = b.iter();
     let mut carry = false;
@@ -73,9 +80,9 @@ pub fn add_mut(a: &mut [u64], b: &[u64]) -> bool {
     carry
 }
 
-fn add_with_carry(digita: u64, digitb: u64, prev_carry: bool) -> (u64, bool) {
+fn add_with_carry(digita: Limb, digitb: Limb, prev_carry: bool) -> (Limb, bool) {
     let (resultdigit, new_carry) = digita.overflowing_add(digitb);
-    let carrydigit = prev_carry as u64;
+    let carrydigit = prev_carry as Limb;
     match new_carry {
         true => (resultdigit + carrydigit, true),
         false => resultdigit.overflowing_add(carrydigit),

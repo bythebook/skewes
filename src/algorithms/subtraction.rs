@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 use super::comparison::cmp_slice;
-use crate::{Natural,Sign};
+use crate::{Natural,Sign,Limb};
 
 #[inline]
 pub fn sub_signed(first: &Natural, second: &Natural) -> (Sign, Natural) {
@@ -12,7 +12,7 @@ pub fn sub_signed(first: &Natural, second: &Natural) -> (Sign, Natural) {
 }
 
 #[inline]
-pub (in crate::algorithms) fn sub_slice_assign(first: &mut [u64], second: &[u64]) {
+pub (in crate::algorithms) fn sub_slice_assign(first: &mut [Limb], second: &[Limb]) {
     let mut carry: bool = false;
     let mut other_iter = second.iter();
     for digit in first.iter_mut() {
@@ -24,7 +24,7 @@ pub (in crate::algorithms) fn sub_slice_assign(first: &mut [u64], second: &[u64]
 }
 
 #[inline]
-pub (in crate::algorithms) fn sub_slice(first: &[u64], second: &[u64]) -> Vec<u64> {
+pub (in crate::algorithms) fn sub_slice(first: &[Limb], second: &[Limb]) -> Vec<Limb> {
     let mut carry: bool = false;
     let mut result: Vec<u64> = Vec::with_capacity(first.len());
 

@@ -11,6 +11,14 @@ use crate::algorithms::{
     mul, div, cmp_slice,
 };
 
+/// A limb is a large 'digit' used in multiple-precision arithmetic
+/// (The terminology comes from GMP).
+/// E.g. if Limb is a 64-bit unsigned integer, we chunk big numbers up into
+/// powers of 2^64 and perform arithmetic on these limbs/digits
+/// The use of 'Limb' distinguises it from the common base-10 usage of digit and 
+/// more strongly implies that this is a large digit.
+pub type Limb = u64;
+
 ///
 /// A type representing a positive number with arbitrary precision
 /// 
@@ -27,11 +35,12 @@ use crate::algorithms::{
 /// 
 #[derive(Debug,PartialEq,Eq,Clone)]
 pub struct Natural {
-    pub(crate) digits: Vec<u64>
+    /// A little-endian vector of limbs of the number
+    pub(crate) digits: Vec<Limb>
 }
 
-impl From<u64> for Natural {
-    fn from(digit: u64) -> Self {
+impl From<Limb> for Natural {
+    fn from(digit: Limb) -> Self {
         Self {
             digits: vec!(digit),
         }
@@ -54,8 +63,8 @@ impl TryFrom<Natural> for u32 {
     }
 }
 
-impl From<Vec<u64>> for Natural {
-    fn from(digits: Vec<u64>) -> Self {
+impl From<Vec<Limb>> for Natural {
+    fn from(digits: Vec<Limb>) -> Self {
         Self {
             digits,
         }
@@ -132,6 +141,7 @@ impl Natural {
     /// 
     /// Immutable addition - allocates and stores result
     /// 
+    #[inline]
     pub fn add(&self, other: &Self) -> Self {
         let result = add(&self.digits, &other.digits);
         Self::from(result)
@@ -140,6 +150,7 @@ impl Natural {
     ///
     /// Mutable addition - stores result in self
     /// 
+    #[inline]
     pub fn add_mut(&mut self, other: &Self) {
         // We need to ensure here that self.digits is big enough to hold the result
         // add_mut from algorithms expects this.
@@ -157,6 +168,7 @@ impl Natural {
     /// 
     /// Immutable subtraction - allocates and stores result
     /// 
+    #[inline]
     pub fn sub(&self, other: &Self) -> Option<Self> {
         let (sign, value) = sub_signed(&self, &other);
         match sign {
@@ -168,12 +180,14 @@ impl Natural {
     /// 
     /// Immutable multiplication - allocates and stores result
     /// 
+    #[inline]
     pub fn mul(&self, other: &Self) -> Self {
         let result = mul(&self.digits, &other.digits);
         Self::from(result)
     }
 
     /// Immutable division - allocates and stores result
+    #[inline]
     pub fn div(&self, other: &Self) -> (Self, Self) {
         div(&self, &other)
     }
@@ -182,6 +196,7 @@ impl Natural {
     ///
     /// Increments a number in-place
     /// 
+    #[inline]
     pub fn inc(&mut self) {
         let mut carry = false;
         for digit in &mut self.digits {
@@ -209,7 +224,7 @@ impl Natural {
         s.into().chars()
             .for_each(|c| {
                 let d: u32 = c.to_digit(10).unwrap();
-                n = &(&n * &Natural::from(10)) + &Natural::from(d as u64);
+                n = &(&n * &Natural::from(10)) + &Natural::from(d as Limb);
             });
         n
     }
